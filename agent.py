@@ -12,11 +12,10 @@ import platform
 
 from prompt_template import react_system_prompt_template
 
-
 class ReActAgent:
-    def __init__(self, tools: List[Callable], model: str, project_directory: str):
+    def __init__(self, tools: List[Callable], project_directory: str):
         self.tools = { func.__name__: func for func in tools }
-        self.model = model
+        self.model = ReActAgent.get_openai_model()
         self.project_directory = project_directory
         print(f"---------------- project_directory: {self.project_directory}")
         self.client = OpenAI(
@@ -83,33 +82,41 @@ class ReActAgent:
     def render_system_prompt(self, system_prompt_template: str) -> str:
         """渲染系统提示模板，替换变量"""
         tool_list = self.get_tool_list()
-        file_list = ", ".join(
-            os.path.abspath(os.path.join(self.project_directory, f))
-            for f in os.listdir(self.project_directory)
-        )
+      
+        print(f"---------------- tool_list: {tool_list}")
+      
         return Template(system_prompt_template).substitute(
             operating_system=self.get_operating_system_name(),
             tool_list=tool_list,
-            file_list=file_list
+            project_directory=self.project_directory
+
         )
 
     @staticmethod
     def get_api_key() -> str:
         """Load the API key from an environment variable."""
         load_dotenv()
-        api_key = os.getenv("GITHUB_MODEL_TOKEN")
+        api_key = os.getenv("OPENAI_API_TOKEN")
         if not api_key:
-            raise ValueError("未找到 GITHUB_MODEL_TOKEN 环境变量，请在 .env 文件中设置。")
+            raise ValueError("未找到 OPENAI_API_TOKEN 环境变量，请在 .env 文件中设置。")
         return api_key
 
     def get_api_base_url() -> str:
             """Load the API key from an environment variable."""
             load_dotenv()
-            api_url = os.getenv("GITHUB_API_BASE_URL")
+            api_url = os.getenv("OPENAI_API_BASE_URL")
             if not api_url:
-                raise ValueError("未找到 GITHUB_API_BASE_URL 环境变量，请在 .env 文件中设置。")
+                raise ValueError("未找到 OPENAI_API_BASE_URL 环境变量，请在 .env 文件中设置。")
             return api_url
 
+    def get_openai_model() -> str:
+            """Load the API key from an environment variable."""
+            load_dotenv()
+            model = os.getenv("OPENAI_MODEL")
+            if not model:
+                raise ValueError("未找到 OPENAI_MODEL 环境变量，请在 .env 文件中设置。")
+            return model
+    
 
     def call_model(self, messages):
         print("\n\n正在请求模型，请稍等...")
@@ -230,7 +237,7 @@ def main(project_directory):
     print(f"---------------- project_dir: {project_dir}\n")
 
     tools = [read_file, write_to_file, run_terminal_command]
-    agent = ReActAgent(tools=tools, model="openai/gpt-4o-mini", project_directory=project_dir)
+    agent = ReActAgent(tools=tools, project_directory=project_dir)
 
     task = input("请输入任务：")
 
