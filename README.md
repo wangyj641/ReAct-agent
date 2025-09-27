@@ -1,8 +1,6 @@
 # ReAct agent for generating source code
 
-### Install uv
-
-https://docs.astral.sh/uv/getting-started/installation/
+Implement a simple agent to generate source code automatically.
 
 ### Set AI model environment：
 
@@ -12,19 +10,21 @@ GITHUB_API_BASE_URL=xxx
 GITHUB_MODEL=xxx
 ```
 
-### Start agent
+### Start App
 
-Input your project path
+Start agent and input your project path
 
 ```bash
 uv run agent.py {your project path}
 ```
 
-Then, input your task. You will get project source code in your specified path.
+Then, tell agent what you want it to do, Such as developing a card game.
 Fox example:
 
 ```bash
 uv run agent.py .source/card_gname
-请输入任务：使用c++, 编写一个card game游戏
+Input your task：Develop a card game with C++
 
 ```
+
+You will get card game source code in the project directory you input
