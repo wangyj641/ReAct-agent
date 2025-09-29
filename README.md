@@ -1,6 +1,6 @@
-# ReAct agent for generating source code
+# ReAct agent Code assistant
 
-Implement a simple agent to generate source code automatically.
+A ReAct agent to help you coding. It wil generate source code automatically according to your request
 
 ### Set AI model environment
 
