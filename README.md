@@ -2,7 +2,9 @@
 
 Implement a simple agent to generate source code automatically.
 
-### Set AI model environment：
+### Set AI model environment
+
+Here, I use github model which it is free
 
 ```
 GITHUB_MODEL_TOKEN=xxx
@@ -23,7 +25,7 @@ Fox example:
 
 ```bash
 uv run agent.py .source/card_gname
-Input your task：Develop a card game with C++
+Input your task：Develop a card game with C++ programing language
 
 ```
 

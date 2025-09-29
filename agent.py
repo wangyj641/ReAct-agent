@@ -2,13 +2,13 @@ import ast
 import inspect
 import os
 import re
+import click
+import platform
+
 from string import Template
 from typing import List, Callable, Tuple
-
-import click
 from dotenv import load_dotenv
 from openai import OpenAI
-import platform
 
 from prompt_template import react_system_prompt_template
 
@@ -17,7 +17,7 @@ class ReActAgent:
         self.tools = { func.__name__: func for func in tools }
         self.model = ReActAgent.get_openai_model()
         self.project_directory = project_directory
-        print(f"---------------- project_directory: {self.project_directory}")
+        #print(f"---------------- project_directory: {self.project_directory}")
         self.client = OpenAI(
             base_url=ReActAgent.get_api_base_url(),
             api_key=ReActAgent.get_api_key(),
@@ -32,45 +32,45 @@ class ReActAgent:
 
         while True:
 
-            # 请求模型
+            # request model
             content = self.call_model(messages)
 
-            # 检测 Thought
+            # check Thought
             thought_match = re.search(r"<thought>(.*?)</thought>", content, re.DOTALL)
             if thought_match:
                 thought = thought_match.group(1)
                 print(f"\n\n💭 Thought: {thought}")
 
-            # 检测模型是否输出 Final Answer，如果是的话，直接返回
+            # check model output Final Answer, if so, return it directly
             if "<final_answer>" in content:
                 final_answer = re.search(r"<final_answer>(.*?)</final_answer>", content, re.DOTALL)
                 return final_answer.group(1)
 
-            # 检测 Action
+            # check Action
             action_match = re.search(r"<action>(.*?)</action>", content, re.DOTALL)
             if not action_match:
-                raise RuntimeError("模型未输出 <action>")
+                raise RuntimeError("model fail to output <action>")
             action = action_match.group(1)
             tool_name, args = self.parse_action(action)
 
             print(f"\n\n🔧 Action: {tool_name}({', '.join(args)})")
-            # 只有终端命令才需要询问用户，其他的工具直接执行
-            should_continue = input(f"\n\n是否继续？（Y/N）") if tool_name == "run_terminal_command" else "y"
+            # only for run_terminal_command, ask user whether to continue
+            should_continue = input(f"\n\nContinue? (Y/N) ") if tool_name == "run_terminal_command" else "y"
             if should_continue.lower() != 'y':
-                print("\n\n操作已取消。")
-                return "操作被用户取消"
+                print("\n\nOperation cancelled by user.")
+                return "Operation cancelled by user."
 
             try:
                 observation = self.tools[tool_name](*args)
             except Exception as e:
-                observation = f"工具执行错误：{str(e)}"
-            print(f"\n\n🔍 Observation：{observation}")
+                observation = f"Tool executive error: {str(e)}"
+            print(f"\n\n🔍 Observation: {observation}")
             obs_msg = f"<observation>{observation}</observation>"
             messages.append({"role": "user", "content": obs_msg})
 
 
     def get_tool_list(self) -> str:
-        """生成工具列表字符串，包含函数签名和简要说明"""
+        """Gernerate a formatted list of available tools with their signatures and docstrings."""
         tool_descriptions = []
         for func in self.tools.values():
             name = func.__name__
@@ -80,7 +80,7 @@ class ReActAgent:
         return "\n".join(tool_descriptions)
 
     def render_system_prompt(self, system_prompt_template: str) -> str:
-        """渲染系统提示模板，替换变量"""
+        """Render the system prompt with dynamic values."""
         tool_list = self.get_tool_list()
       
         print(f"---------------- tool_list: {tool_list}")
@@ -98,7 +98,7 @@ class ReActAgent:
         load_dotenv()
         api_key = os.getenv("OPENAI_API_TOKEN")
         if not api_key:
-            raise ValueError("未找到 OPENAI_API_TOKEN 环境变量，请在 .env 文件中设置。")
+            raise ValueError("Fail to find OPENAI_API_TOKEN environment variable, please set it in the .env file.")
         return api_key
 
     def get_api_base_url() -> str:
@@ -106,7 +106,7 @@ class ReActAgent:
             load_dotenv()
             api_url = os.getenv("OPENAI_API_BASE_URL")
             if not api_url:
-                raise ValueError("未找到 OPENAI_API_BASE_URL 环境变量，请在 .env 文件中设置。")
+                raise ValueError("Fail to find OPENAI_API_BASE_URL environment variable, please set it in the .env file.")
             return api_url
 
     def get_openai_model() -> str:
@@ -114,12 +114,12 @@ class ReActAgent:
             load_dotenv()
             model = os.getenv("OPENAI_MODEL")
             if not model:
-                raise ValueError("未找到 OPENAI_MODEL 环境变量，请在 .env 文件中设置。")
+                raise ValueError("Fail to find OPENAI_MODEL environment variable, please set it in the .env file.")
             return model
     
 
     def call_model(self, messages):
-        print("\n\n正在请求模型，请稍等...")
+        print("\n\nRequesting model...")
         response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
@@ -136,7 +136,7 @@ class ReActAgent:
         func_name = match.group(1)
         args_str = match.group(2).strip()
 
-        # 手动解析参数，特别处理包含多行内容的字符串
+        # anlyze args_str to extract arguments
         args = []
         current_arg = ""
         in_string = False
@@ -159,7 +159,7 @@ class ReActAgent:
                     paren_depth -= 1
                     current_arg += char
                 elif char == ',' and paren_depth == 0:
-                    # 遇到顶层逗号，结束当前参数
+                    # end of an argument
                     args.append(self._parse_single_arg(current_arg.strip()))
                     current_arg = ""
                 else:
@@ -172,32 +172,31 @@ class ReActAgent:
             
             i += 1
         
-        # 添加最后一个参数
+        # Add the last argument if exists
         if current_arg.strip():
             args.append(self._parse_single_arg(current_arg.strip()))
         
         return func_name, args
     
     def _parse_single_arg(self, arg_str: str):
-        """解析单个参数"""
+        """Parse a single argument string to its appropriate type."""
         arg_str = arg_str.strip()
         
-        # 如果是字符串字面量
+        # string argument
         if (arg_str.startswith('"') and arg_str.endswith('"')) or \
            (arg_str.startswith("'") and arg_str.endswith("'")):
-            # 移除外层引号并处理转义字符
+            # Remove the surrounding quotes
             inner_str = arg_str[1:-1]
-            # 处理常见的转义字符
+            # Handle escaped quotes and common escape sequences
             inner_str = inner_str.replace('\\"', '"').replace("\\'", "'")
             inner_str = inner_str.replace('\\n', '\n').replace('\\t', '\t')
             inner_str = inner_str.replace('\\r', '\r').replace('\\\\', '\\')
             return inner_str
         
-        # 尝试使用 ast.literal_eval 解析其他类型
+        # try to parse as a literal (number, list, dict, etc.)
         try:
             return ast.literal_eval(arg_str)
         except (SyntaxError, ValueError):
-            # 如果解析失败，返回原始字符串
             return arg_str
 
     def get_operating_system_name(self):
@@ -211,35 +210,35 @@ class ReActAgent:
 
 
 def read_file(file_path):
-    """用于读取文件内容"""
+    """Read the content of a specified file"""
     with open(file_path, "r", encoding="utf-8") as f:
         return f.read()
 
 def write_to_file(file_path, content):
-    """将指定内容写入指定文件"""
+    """Write content to a specified file"""
     print(f"---------------- file_path: {file_path}")
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(content.replace("\\n", "\n"))
-    return "写入成功"
+    return "Write success"
 
 def run_terminal_command(command):
-    """用于执行终端命令"""
+    """Run a terminal command and return its output or error message"""
     import subprocess
     run_result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    return "执行成功" if run_result.returncode == 0 else run_result.stderr
+    return "Execution success" if run_result.returncode == 0 else run_result.stderr
 
 @click.command()
 @click.argument('project_directory',
                 type=click.Path(exists=True, file_okay=False, dir_okay=True))
 def main(project_directory):
-    print(f"-------------------------------------\n");
+    print(f"----------------- ReAct agent --------------------\n");
     project_dir = os.path.abspath(project_directory)
     print(f"---------------- project_dir: {project_dir}\n")
 
     tools = [read_file, write_to_file, run_terminal_command]
     agent = ReActAgent(tools=tools, project_directory=project_dir)
 
-    task = input("请输入任务：")
+    task = input("Tell me your task：")
 
     final_answer = agent.run(task)
 
