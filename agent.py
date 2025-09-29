@@ -9,6 +9,7 @@ from string import Template
 from typing import List, Callable, Tuple
 from dotenv import load_dotenv
 from openai import OpenAI
+from tools import read_file, write_to_file, run_terminal_command
 
 from prompt_template import react_system_prompt_template
 
@@ -17,7 +18,6 @@ class ReActAgent:
         self.tools = { func.__name__: func for func in tools }
         self.model = ReActAgent.get_openai_model()
         self.project_directory = project_directory
-        #print(f"---------------- project_directory: {self.project_directory}")
         self.client = OpenAI(
             base_url=ReActAgent.get_api_base_url(),
             api_key=ReActAgent.get_api_key(),
@@ -101,6 +101,7 @@ class ReActAgent:
             raise ValueError("Fail to find OPENAI_API_TOKEN environment variable, please set it in the .env file.")
         return api_key
 
+    @staticmethod
     def get_api_base_url() -> str:
             """Load the API key from an environment variable."""
             load_dotenv()
@@ -109,6 +110,7 @@ class ReActAgent:
                 raise ValueError("Fail to find OPENAI_API_BASE_URL environment variable, please set it in the .env file.")
             return api_url
 
+    @staticmethod   
     def get_openai_model() -> str:
             """Load the API key from an environment variable."""
             load_dotenv()
@@ -209,23 +211,6 @@ class ReActAgent:
         return os_map.get(platform.system(), "Unknown")
 
 
-def read_file(file_path):
-    """Read the content of a specified file"""
-    with open(file_path, "r", encoding="utf-8") as f:
-        return f.read()
-
-def write_to_file(file_path, content):
-    """Write content to a specified file"""
-    print(f"---------------- file_path: {file_path}")
-    with open(file_path, "w", encoding="utf-8") as f:
-        f.write(content.replace("\\n", "\n"))
-    return "Write success"
-
-def run_terminal_command(command):
-    """Run a terminal command and return its output or error message"""
-    import subprocess
-    run_result = subprocess.run(command, shell=True, capture_output=True, text=True)
-    return "Execution success" if run_result.returncode == 0 else run_result.stderr
 
 @click.command()
 @click.argument('project_directory',
@@ -233,7 +218,7 @@ def run_terminal_command(command):
 def main(project_directory):
     print(f"----------------- ReAct agent --------------------\n");
     project_dir = os.path.abspath(project_directory)
-    print(f"---------------- project_dir: {project_dir}\n")
+    #print(f"---------------- project_dir: {project_dir}\n")
 
     tools = [read_file, write_to_file, run_terminal_command]
     agent = ReActAgent(tools=tools, project_directory=project_dir)
