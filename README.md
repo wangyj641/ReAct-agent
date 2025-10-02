@@ -1,6 +1,6 @@
 # ReAct agent Code assistant
 
-A ReAct agent to help you coding. It wil generate source code automatically according to your request
+A ReAct agent to help you coding. It will generate source code automatically according to your request
 
 ### Set AI model environment
 
@@ -14,19 +14,23 @@ GITHUB_MODEL=xxx
 
 ### Start App
 
-Start agent and input your project path
+Start agent
 
 ```bash
-uv run agent.py {your project path}
+uv run agent.py
 ```
 
 Then, tell agent what you want it to do, Such as developing a card game.
 Fox example:
 
 ```bash
-uv run agent.py .source/card_gname
+uv run agent.py
 Input your task：Develop a card game with C++ programing language
 
 ```
 
-You will get card game source code in the project directory you input
+You will get card game source code in directory
+
+```bash
+.source
+```

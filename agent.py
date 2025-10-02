@@ -4,6 +4,8 @@ import os
 import re
 import click
 import platform
+import os
+import shutil
 
 from string import Template
 from typing import List, Callable, Tuple
@@ -12,6 +14,19 @@ from openai import OpenAI
 from tools import read_file, write_to_file, run_terminal_command
 
 from prompt_template import react_system_prompt_template
+
+def recreate_folder(folder_name: str):
+    # get current working directory
+    current_dir = os.getcwd()
+    folder_path = os.path.join(current_dir, folder_name)
+
+    # remove existing folder if it exists
+    if os.path.exists(folder_path):
+        shutil.rmtree(folder_path)
+
+    os.makedirs(folder_path)
+    print(f"Create directory: {folder_path}")
+
 
 class ReActAgent:
     def __init__(self, tools: List[Callable], project_directory: str):
@@ -24,7 +39,7 @@ class ReActAgent:
         )
 
     def run(self, user_input: str):
-        print(f"---------------- user_input: {user_input}. Project directory: {self.project_directory}")
+        #print(f"---------------- user_input: {user_input}. Project directory: {self.project_directory}")
         messages = [
             {"role": "system", "content": self.render_system_prompt(react_system_prompt_template)},
             {"role": "user", "content": f"<question>{user_input}</question>"}
@@ -83,7 +98,7 @@ class ReActAgent:
         """Render the system prompt with dynamic values."""
         tool_list = self.get_tool_list()
       
-        print(f"---------------- tool_list: {tool_list}")
+        #print(f"---------------- tool_list: {tool_list}")
       
         return Template(system_prompt_template).substitute(
             operating_system=self.get_operating_system_name(),
@@ -211,23 +226,21 @@ class ReActAgent:
         return os_map.get(platform.system(), "Unknown")
 
 
-
-@click.command()
-@click.argument('project_directory',
-                type=click.Path(exists=True, file_okay=False, dir_okay=True))
-def main(project_directory):
+def main():
     print(f"----------------- ReAct agent --------------------\n");
-    project_dir = os.path.abspath(project_directory)
-    #print(f"---------------- project_dir: {project_dir}\n")
+
+    task = input("Tell me your task: ")
+
+    project_directory = ".source"
+    recreate_folder(project_directory)
+    project_dir = os.path.abspath(project_directory)    
 
     tools = [read_file, write_to_file, run_terminal_command]
+
     agent = ReActAgent(tools=tools, project_directory=project_dir)
-
-    task = input("Tell me your task：")
-
     final_answer = agent.run(task)
 
-    print(f"\n\n✅ Final Answer：{final_answer}")
+    print(f"\n\n✅ Final Answer: {final_answer}")
 
 if __name__ == "__main__":
     main()
